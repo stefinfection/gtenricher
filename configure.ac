@@ -35,7 +35,7 @@ AS_IF([test "x$debug" = xtrue], [AC_DEFINE([LOGLVL], [LOGLV_DEBUG], [Define log 
 
 
 ## Checks for libraries
-AC_CHECK_LIB([hts], [bcf_read1], [], [AC_MSG_ERROR([Could not find htslib shared library])])
+AC_CHECK_LIB([hts], [bcf_read], [], [AC_MSG_ERROR([Could not find htslib shared library])])
 
 AC_CONFIG_FILES([Makefile src/Makefile])
 AC_OUTPUT
