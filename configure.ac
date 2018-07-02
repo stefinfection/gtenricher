@@ -33,6 +33,12 @@ AC_ARG_ENABLE([debug],
 
 AS_IF([test "x$debug" = xtrue], [AC_DEFINE([LOGLVL], [LOGLV_DEBUG], [Define log level to be debug])])
 
+AC_ARG_WITH([htslib],
+            [AS_HELP_STRING([--with-htslib=<path-to-htslib>],
+                            [Specify the path to which htslib this program will link against])])
+
+AS_IF([test "x$with_htslib" != x], [CPPFLAGS="$CPPFLAGS -I$with_htslib"])
+AS_IF([test "x$with_htslib" != x], [LDFLAGS="$LDFLAGS -L$with_htslib"])
 
 ## Checks for libraries
 AC_CHECK_LIB([hts], [bcf_read], [], [AC_MSG_ERROR([Could not find htslib shared library])])
