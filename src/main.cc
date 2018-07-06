@@ -9,6 +9,11 @@ using namespace YiCppLib::HTSLibpp;
 
 int main(int argc, const char* argv[]) {
 
+    if(argc < 2) {
+        std::cout<<"no subset defined on the command line. exiting...";
+        exit(1);
+    }
+
     // input and output file handles
     auto htsInHandle = htsOpen("-", "r");
     auto htsOutHandle = htsOpen("-", "w");
@@ -22,47 +27,51 @@ int main(int argc, const char* argv[]) {
     }
 
     // get sample names
-    std::vector<std::string> sampleNames;
+    std::vector<const std::string> sampleNames;
+    sampleNames.reserve(bcf_hdr_nsamples(header.get()));
     std::transform( 
         htsHeader<bcfHeader>::dictBegin(header, htsHeader<bcfHeader>::DictType::SAMPLE), 
         htsHeader<bcfHeader>::dictEnd(header, htsHeader<bcfHeader>::DictType::SAMPLE),
         std::back_inserter(sampleNames),
-        [](auto &sampleRec){ auto p = htsProxy(sampleRec); return p.key(); }
+        [](const auto &sampleRec){ const auto p = htsProxy(sampleRec); return p.key(); }
     );
 
-    std::set<std::string> subset{"11200X11", "11200X12", "11200X9"};
+    std::cerr<<"proband: ";
+    for_each(sampleNames.cbegin(), sampleNames.cend(), [](auto& sample) { std::cerr<<sample<<" "; });
+    std::cerr<<std::endl;
 
-    bcf_hdr_write(htsOutHandle.get(), header.get());
-    std::for_each(begin(htsInHandle, header), end(htsInHandle, header), [&htsOutHandle, &header, &sampleNames, &subset](auto &bcfRecord) {
+    const std::set<const std::string> subset(argv+1, argv+argc);
+
+    std::cerr<<"subset: ";
+    for_each(subset.cbegin(), subset.cend(), [](auto& sample) { std::cerr<<sample<<" "; });
+    std::cerr<<std::endl;
+
+    auto outHeader = bcfHeader{bcf_hdr_subset(header.get(), 0, nullptr, nullptr)};
+    bcf_hdr_append(outHeader.get(), "##INFO=<ID=ENRICH,Number=8,Type=Integer,Description=\"Enrichment of affected genotypes in subset\">");
+    bcf_hdr_write(htsOutHandle.get(), outHeader.get());
+
+    
+    std::for_each(begin(htsInHandle, header), end(htsInHandle, header), [&](auto &rec) {
         int ngt, *gt_arr = NULL, ngt_arr = 0;
-        ngt = bcf_get_genotypes(header.get(), bcfRecord.get(), &gt_arr, &ngt_arr);
+        ngt = bcf_get_genotypes(header.get(), rec.get(), &gt_arr, &ngt_arr);
 
-        std::vector<int> proband_counts(4, 0);
-        std::vector<int> subset_counts(4, 0);
+        std::vector<int32_t> counts(8, 0); // IDX 0-3: proband; IDX4-7: subset
 
         for(int sample=0; sample<sampleNames.size(); sample++) {
 
             int key = ((gt_arr[sample * 2] >> 1) - 1) + ((gt_arr[sample * 2 + 1] >> 1) - 1);
-            std::cout<<"key: "<<key<<std::endl;
             if(key < 0) key = 3;
 
-            ++proband_counts[key];
-            if(subset.find(sampleNames[sample]) != subset.end()) ++subset_counts[key];
+            ++counts[key];
+            if(subset.find(sampleNames[sample]) != subset.end()) ++counts[key+4];
         }
 
-        for(int i=0; i<ngt; i+=2) {
-            std::cout<<(gt_arr[i]>>1) - 1<<"/"<<(gt_arr[i+1] >> 1) - 1<<"\t";
-        }
-        std::cout<<std::endl;
-        std::cout<<"proband: ";
-        for(int i=0; i<4; i++) std::cout<<proband_counts[i]<<"\t";
-        std::cout<<std::endl;
-        std::cout<<"subset : ";
-        for(int i=0; i<4; i++) std::cout<<subset_counts[i]<<"\t";
-        std::cout<<std::endl;
+        bcf_update_info_int32(outHeader.get(), rec.get(), "ENRICH", &counts[0], 8);
+        bcf_subset(outHeader.get(), rec.get(), 0, nullptr);
+        bcf_write(htsOutHandle.get(), outHeader.get(), rec.get());
+
+        free(gt_arr);
     });
-
-    
 
     return 0;
 }
