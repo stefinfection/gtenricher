@@ -19,6 +19,10 @@ AX_CXX_COMPILE_STDCXX_14
 
 AC_CONFIG_HEADERS([config.h])
 
+CFLAGS=
+CPPFLAGS=
+CXXFLAGS=
+
 ## START: DEBUG / RELEASE ##
 AC_ARG_ENABLE([debug],
               [AS_HELP_STRING([--enable-debug],
@@ -29,9 +33,24 @@ AC_ARG_ENABLE([debug],
                 *)   AC_MSG_ERROR([bad value ${enableval} for --enable-debug]) ;;
                esac],
               [debug=false])
+
+AM_CONDITIONAL([DEBUG], [test x"$debug" = x"true"])
+AS_IF([test "x$debug" = xtrue], [AC_DEFINE([LOGLVL], [LOGLV_DEBUG], [Define log level to be debug])])
 ## END: DEBUG / RELEASE ##
 
-AS_IF([test "x$debug" = xtrue], [AC_DEFINE([LOGLVL], [LOGLV_DEBUG], [Define log level to be debug])])
+## START: PROFILING ##
+AC_ARG_ENABLE([profiling],
+              [AS_HELP_STRING([--enable-profiling],
+                              [enable profiling, default: no])],
+              [case "${enableval}" in
+                yes) profiling=true ;;
+                no)  profiling=false ;;
+                *)   AC_MSG_ERROR([bad value ${enableval} for --enable-profiling]) ;;
+               esac],
+              [profiling=false])
+
+AM_CONDITIONAL([PROFILING], [test x"$profiling" = x"true"])
+## END: DEBUG / RELEASE ##
 
 AC_ARG_WITH([htslib],
             [AS_HELP_STRING([--with-htslib=<path-to-htslib>],

@@ -635,6 +635,10 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+PROFILING_FALSE
+PROFILING_TRUE
+DEBUG_FALSE
+DEBUG_TRUE
 HAVE_CXX14
 CXXCPP
 CPP
@@ -737,7 +741,6 @@ infodir
 docdir
 oldincludedir
 includedir
-runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -771,6 +774,7 @@ with_gnu_ld
 with_sysroot
 enable_libtool_lock
 enable_debug
+enable_profiling
 with_htslib
 '
       ac_precious_vars='build_alias
@@ -825,7 +829,6 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
-runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -1078,15 +1081,6 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
-  -runstatedir | --runstatedir | --runstatedi | --runstated \
-  | --runstate | --runstat | --runsta | --runst | --runs \
-  | --run | --ru | --r)
-    ac_prev=runstatedir ;;
-  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
-  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
-  | --run=* | --ru=* | --r=*)
-    runstatedir=$ac_optarg ;;
-
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1224,7 +1218,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir runstatedir
+		libdir localedir mandir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1377,7 +1371,6 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
-  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -1428,6 +1421,7 @@ Optional Features:
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
   --enable-debug          enable debugging, default: no
+  --enable-profiling      enable profiling, default: no
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -17223,6 +17217,10 @@ $as_echo "#define HAVE_CXX14 1" >>confdefs.h
 ac_config_headers="$ac_config_headers config.h"
 
 
+CFLAGS=
+CPPFLAGS=
+CXXFLAGS=
+
 ## START: DEBUG / RELEASE ##
 # Check whether --enable-debug was given.
 if test "${enable_debug+set}" = set; then :
@@ -17235,13 +17233,44 @@ else
   debug=false
 fi
 
-## END: DEBUG / RELEASE ##
+
+ if test x"$debug" = x"true"; then
+  DEBUG_TRUE=
+  DEBUG_FALSE='#'
+else
+  DEBUG_TRUE='#'
+  DEBUG_FALSE=
+fi
 
 if test "x$debug" = xtrue; then :
 
 $as_echo "#define LOGLVL LOGLV_DEBUG" >>confdefs.h
 
 fi
+## END: DEBUG / RELEASE ##
+
+## START: PROFILING ##
+# Check whether --enable-profiling was given.
+if test "${enable_profiling+set}" = set; then :
+  enableval=$enable_profiling; case "${enableval}" in
+                yes) profiling=true ;;
+                no)  profiling=false ;;
+                *)   as_fn_error $? "bad value ${enableval} for --enable-profiling" "$LINENO" 5 ;;
+               esac
+else
+  profiling=false
+fi
+
+
+ if test x"$profiling" = x"true"; then
+  PROFILING_TRUE=
+  PROFILING_FALSE='#'
+else
+  PROFILING_TRUE='#'
+  PROFILING_FALSE=
+fi
+
+## END: DEBUG / RELEASE ##
 
 
 # Check whether --with-htslib was given.
@@ -17443,6 +17472,14 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${am__fastdepCC_TRUE}" && test -z "${am__fastdepCC_FALSE}"; then
   as_fn_error $? "conditional \"am__fastdepCC\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${DEBUG_TRUE}" && test -z "${DEBUG_FALSE}"; then
+  as_fn_error $? "conditional \"DEBUG\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${PROFILING_TRUE}" && test -z "${PROFILING_FALSE}"; then
+  as_fn_error $? "conditional \"PROFILING\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 
