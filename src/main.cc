@@ -1,7 +1,12 @@
+#include "config.h"
+
 #include <iostream>
+#include <sstream>
 #include <vector>
 #include <set>
 #include <algorithm>
+#include <tuple>
+#include "log.h"
 #include "../contrib/htslibpp/htslibpp.h"
 #include "../contrib/htslibpp/htslibpp_variant.h"
 
@@ -27,29 +32,24 @@ int main(int argc, const char* argv[]) {
     }
 
     // get sample names
-    std::vector<const std::string> sampleNames;
-    sampleNames.reserve(bcf_hdr_nsamples(header.get()));
+    std::vector<const std::string> samples;
+    samples.reserve(bcf_hdr_nsamples(header.get()));
     std::transform( 
         htsHeader<bcfHeader>::dictBegin(header, htsHeader<bcfHeader>::DictType::SAMPLE), 
         htsHeader<bcfHeader>::dictEnd(header, htsHeader<bcfHeader>::DictType::SAMPLE),
-        std::back_inserter(sampleNames),
+        std::back_inserter(samples),
         [](const auto &sampleRec){ const auto p = htsProxy(sampleRec); return p.key(); }
     );
 
-    std::cerr<<"proband: ";
-    for_each(sampleNames.cbegin(), sampleNames.cend(), [](auto& sample) { std::cerr<<sample<<" "; });
-    std::cerr<<std::endl;
-
+    // get proband names from command line
     const std::set<const std::string> subset(argv+1, argv+argc);
 
-    std::cerr<<"subset: ";
-    for_each(subset.cbegin(), subset.cend(), [](auto& sample) { std::cerr<<sample<<" "; });
-    std::cerr<<std::endl;
+    { std::stringstream strbuf; for(auto &s : samples) strbuf<<s<<" "; logger(LOGLV_INFO)<<"proband: "<<strbuf.str()<<std::endl; }
+    { std::stringstream strbuf; for(auto &s : subset)  strbuf<<s<<" "; logger(LOGLV_INFO)<<"subset:  "<<strbuf.str()<<std::endl; }
 
     auto outHeader = bcfHeader{bcf_hdr_subset(header.get(), 0, nullptr, nullptr)};
     bcf_hdr_append(outHeader.get(), "##INFO=<ID=ENRICH,Number=8,Type=Integer,Description=\"Enrichment of affected genotypes in subset\">");
-    bcf_hdr_write(htsOutHandle.get(), outHeader.get());
-
+    htsOutHandle << outHeader;
     
     std::for_each(begin(htsInHandle, header), end(htsInHandle, header), [&](auto &rec) {
         int ngt, *gt_arr = NULL, ngt_arr = 0;
@@ -57,18 +57,18 @@ int main(int argc, const char* argv[]) {
 
         std::vector<int32_t> counts(8, 0); // IDX 0-3: proband; IDX4-7: subset
 
-        for(int sample=0; sample<sampleNames.size(); sample++) {
+        for(int sample=0; sample<samples.size(); sample++) {
 
             int key = ((gt_arr[sample * 2] >> 1) - 1) + ((gt_arr[sample * 2 + 1] >> 1) - 1);
             if(key < 0) key = 3;
 
             ++counts[key];
-            if(subset.find(sampleNames[sample]) != subset.end()) ++counts[key+4];
+            if(subset.find(samples[sample]) != subset.end()) ++counts[key+4];
         }
 
         bcf_update_info_int32(outHeader.get(), rec.get(), "ENRICH", &counts[0], 8);
         bcf_subset(outHeader.get(), rec.get(), 0, nullptr);
-        bcf_write(htsOutHandle.get(), outHeader.get(), rec.get());
+        htsOutHandle<<bcfHdrRecPair( outHeader, rec );
 
         free(gt_arr);
     });
