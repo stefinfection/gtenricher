@@ -32,7 +32,7 @@ int main(int argc, const char* argv[]) {
     }
 
     // get sample names
-    std::vector<const std::string> samples;
+    std::vector<std::string> samples;
     samples.reserve(bcf_hdr_nsamples(header.get()));
     std::transform( 
         htsHeader<bcfHeader>::dictBegin(header, htsHeader<bcfHeader>::DictType::SAMPLE), 
@@ -42,8 +42,9 @@ int main(int argc, const char* argv[]) {
     );
 
     // get proband names from command line
-    const std::set<const std::string> subset(argv+1, argv+argc);
-
+    const std::set<std::string> subset(argv+1, argv+argc);
+    
+    logger(LOGLV_INFO)<<samples.size()<<std::endl;
     { std::stringstream strbuf; for(auto &s : samples) strbuf<<s<<" "; logger(LOGLV_INFO)<<"proband: "<<strbuf.str()<<std::endl; }
     { std::stringstream strbuf; for(auto &s : subset)  strbuf<<s<<" "; logger(LOGLV_INFO)<<"subset:  "<<strbuf.str()<<std::endl; }
 
@@ -52,25 +53,33 @@ int main(int argc, const char* argv[]) {
     htsOutHandle << outHeader;
     
     std::for_each(begin(htsInHandle, header), end(htsInHandle, header), [&](auto &rec) {
-        int ngt, *gt_arr = NULL, ngt_arr = 0;
+
+        if(rec->n_allele > 2) {
+            logger(LOGLV_WARN)<<"skipping multi-allelic record at "<<bcf_hdr_id2name(header.get(), rec->rid)<<":"<<rec->pos+1<<std::endl;
+            return;
+        }
+
+        int32_t ngt, *gt_arr = nullptr, ngt_arr = 0;
         ngt = bcf_get_genotypes(header.get(), rec.get(), &gt_arr, &ngt_arr);
+        std::unique_ptr<int32_t> uniq_gt_arr(gt_arr);
 
         std::vector<int32_t> counts(8, 0); // IDX 0-3: proband; IDX4-7: subset
 
-        for(int sample=0; sample<samples.size(); sample++) {
+        for(int sid=0; sid<samples.size(); sid++) {
 
-            int key = ((gt_arr[sample * 2] >> 1) - 1) + ((gt_arr[sample * 2 + 1] >> 1) - 1);
+            int key = ((gt_arr[sid * 2]) >> 1) + ((gt_arr[sid* 2 + 1]) >> 1) - 2;
+
+            assert(key < 4);
+
             if(key < 0) key = 3;
 
             ++counts[key];
-            if(subset.find(samples[sample]) != subset.end()) ++counts[key+4];
+            if(subset.find(samples[sid]) != subset.end()) ++counts[key+4];
         }
 
         bcf_update_info_int32(outHeader.get(), rec.get(), "ENRICH", &counts[0], 8);
-        bcf_subset(outHeader.get(), rec.get(), 0, nullptr);
+        bcf_subset(header.get(), rec.get(), 0, nullptr);
         htsOutHandle<<bcfHdrRecPair( outHeader, rec );
-
-        free(gt_arr);
     });
 
     return 0;
