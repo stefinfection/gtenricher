@@ -59,9 +59,20 @@ AC_ARG_WITH([htslib],
 AS_IF([test "x$with_htslib" != x], [CPPFLAGS="$CPPFLAGS -I$with_htslib"])
 AS_IF([test "x$with_htslib" != x], [LDFLAGS="$LDFLAGS -L$with_htslib"])
 
-## Checks for libraries
-AC_CHECK_LIB([hts], [bcf_read], [], [AC_MSG_ERROR([Could not find htslib shared library])])
+AC_ARG_WITH([gsl],
+            [AS_HELP_STRING([--with-gsl=<path-to-gsl>],
+                            [Specify the path to which gnu scientific library this program will link against])])
 
+AS_IF([test "x$with_gsl" != x], [CPPFLAGS="$CPPFLAGS -I$with_gsl/include"])
+AS_IF([test "x$with_gsl" != x], [LDFLAGS="$LDFLAGS -L$with_gsl/lib"])
+
+
+## Checks for libraries
+AC_CHECK_LIB([m], [cos])
+AC_CHECK_LIB([gslcblas], [cblas_dgemm], [], [AC_MSG_ERROR([Could not find gslcblas shared library])])
+AC_CHECK_LIB([gsl], [gsl_stats_mean], [], [AC_MSG_ERROR([Could not find gsl shared library])])
+
+AC_CHECK_LIB([hts], [bcf_read], [], [AC_MSG_ERROR([Could not find htslib shared library])])
 AC_CONFIG_FILES([Makefile src/Makefile])
 AC_OUTPUT
 
