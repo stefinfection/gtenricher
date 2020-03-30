@@ -1,0 +1,9 @@
+[submodule "contrib/--name"]
+	path = contrib/--name
+	url = https://github.com/stefinfection/htslibpp.git
+[submodule "contrib/--name=htslibpp2"]
+	path = contrib/--name=htslibpp2
+	url = https://github.com/stefinfection/htslibpp.git
+[submodule "contrib/htslibpp2"]
+	path = contrib/htslibpp2
+	url = https://github.com/stefinfection/htslibpp.git
